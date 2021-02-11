@@ -15,3 +15,5 @@ Incoming intern at Fidelity Investments
 4. Money
 5. Excercise
 6. Psychology
+7. Food
+8. Joe Rogan Experience
