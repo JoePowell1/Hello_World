@@ -1,0 +1,138 @@
+#------------------------
+#Script 3
+#World Happiness Analysis
+#------------------------
+
+#Packages
+library(choroplethr)
+library(choroplethrMaps)
+library(ggmap)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(scales)
+#------------------------
+#Load country regions
+data("country.regions")
+str(country.regions)
+#------------------------
+#Clean unmappaple countries
+Happiness_Map <- subset(Happiness, select = c("Country", "Score"))
+Happiness_Map$Country[Happiness_Map$Country == "United States"] <- "United States of America"
+Happiness_Map$Country[Happiness_Map$Country == "Tanzania"] <- "United Republic of Tanzania"
+Happiness_Map$Country[Happiness_Map$Country == "Trinidad & Tobago"] <- "Trinidad and Tobago"
+Happiness_Map$Country[Happiness_Map$Country == "Congo (Brazzaville)"] <- "Republic of Congo"
+Happiness_Map$Country[Happiness_Map$Country == "Congo (Kinshasa)"] <- "Democratic Republic of the Congo"
+#--------------------------------------------------------------------------------------------------------
+#summary group by country
+Happiness_Map <- group_by(Happiness_Map, Country)
+Happiness_Map_Summary <- summarize(Happiness_Map,
+                                   value = Score)
+#--------------------------------------------------------------------------------------------------------
+#COUNTRY CHOROPLETH BY SCORE
+
+#Choropleth needs region and value columns in lowercase
+colnames(Happiness_Map_Summary) <- c("region","value")
+Happiness_Map_Summary$region <- tolower(Happiness_Map_Summary$region)
+
+#Choropleth
+country_choropleth(Happiness_Map_Summary)
+
+#Countries not accounted for
+setdiff(Happiness_Map_Summary$region, country.regions$region)
+#--------------------------------------------------------------------------------------
+#CORRELATION BETWEEN HAPPINESS SCORE AND OTHER VARIABLES...
+
+#Correlation Between Happiness Score and GDP Per Capita (0.79)
+#Generally, the higher the GDP per capita the happier the country
+Happiness4GDP <- cor(TheEndAllMerge$Score, TheEndAllMerge$GDP_Per_Capita)
+
+#Correlation between life expectancy and happiness score (0.78)
+#Living a longer life will increase happiness
+Life_Expect4GDP <- cor(TheEndAllMerge$Healthy_Life_Expectancy, TheEndAllMerge$Score)
+#---------------------------------------------------------------------------------------
+#PLOTS
+#NOTE:Would like to get scatter plots with trendlines
+
+plot(Score~GDP_Per_Capita, data = TheEndAllMerge, col = "forest green"
+    ,main = "GDP Per Capita Vs. Happiness", xlab = "GDP Per Capita", ylab = "Happiness Score")
+abline(lm(Freedom_To_Make_Life_Choices~, data = TheEndAllMerge))
+
+#Freedom to make life choices vs. GDP Per Capita
+plot(Freedom_To_Make_Life_Choices~GDP_Per_Capita, data = TheEndAllMerge,
+     col = "navy blue", main = "GDP Per Capita Vs Freedom of Life Choices",
+     xlab = "GDP Per Capita", ylab = "Freedom to Make Life Choices")
+abline(lm(Score~GDP_Per_Capita, data = TheEndAllMerge))
+#-----------------------------------------------------------------------------------------------
+#Histogram of Overall Scores
+hist(TheEndAllMerge$Score, main = "Histogram of Scores", xlab = "Country Score")
+#-----------------------------------------------------------------------------------------------
+#Corruption and its effects on happiness
+colnames(TheEndAllMerge)[which(names(TheEndAllMerge) == "Pereptions_of_Corruption")] <- "Perceptions_of_Corruption"
+cor(TheEndAllMerge$fragilescore_2020, TheEndAllMerge$Score)
+cor(TheEndAllMerge$Perceptions_of_Corruption, TheEndAllMerge$fragilescore_2020)
+plot(fragilescore_2020~Perceptions_of_Corruption,
+     data = TheEndAllMerge,
+     col="red",
+     xlab="Perceived Corruption",
+     ylab="Fragile Score",
+     main="Perceived Corruption vs Fragile Score")
+
+plot(Score~fragilescore_2020,
+     data = TheEndAllMerge,
+     col="red",
+     xlab="Fragile Score",
+     ylab="Overall Score",
+     main="Corruption vs Overall Score")
+abline(lm(Score~fragilescore_2020, data = TheEndAllMerge))
+
+TimeSeriesValues<-c(sum(TheEndAllMerge$fragilescore_2015),
+                  sum(TheEndAllMerge$fragilescore_2016),
+                  sum(TheEndAllMerge$fragilescore_2017),
+                  sum(TheEndAllMerge$fragilescore_2018),
+                  sum(TheEndAllMerge$fragilescore_2019),
+                  sum(TheEndAllMerge$fragilescore_2020))
+Years<-c("2015","2016","2017","2018","2019","2020")
+qplot(Years, TimeSeriesValues,
+      ylab="Total Fragile Score",
+      main="Total Fragile Score Over Time",
+      aes(group=1),
+      geom="line") +
+  geom_text(aes(label=TimeSeriesValues), size=2.5,
+   hjust=-.1, vjust=-1)+
+  geom_point() +
+  geom_line() +
+  theme_bw()
+#------------------------------------------
+#Type of Government vs. Score
+TheEndAllMerge<- group_by(TheEndAllMerge, constitutional_form)
+GovTypeSummaryStats<-summarize(TheEndAllMerge,
+             Count = n(),
+             Avg.Score=mean(Score, na.rm=TRUE),
+             Median.Score=median(Score, na.rm=TRUE),
+             Min.Score=min(Score, na.rm=TRUE),
+             Max.Score=max(Score, na.rm=TRUE),
+             St.Dev=sd(Score, na.rm=TRUE))
+GovTypeSummaryStats
+fit<-aov(Score~constitutional_form, data = TheEndAllMerge)
+summary(fit)
+boxplot(Score~constitutional_form, data = TheEndAllMerge)
+qqnorm(fit$residuals)
+qqline(fit$residuals, col = "red")
+kruskal.test(Score~constitutional_form, data = TheEndAllMerge)
+qplot(constitutional_form, 
+      Avg.Score,
+      data=GovTypeSummaryStats,
+      geom = "col",
+      fill=constitutional_form,
+      xlab = "Type of Government",
+      ylab = "Average Score",
+      main = "Type of Government vs. Average Score",
+      aes(reorder(constitutional_form, -Avg.Score))) +
+  theme(legend.position = "none") +
+  geom_text(aes(label=Avg.Score), size=2.5,
+            vjust=-.4)
+
+        
+        
+        
